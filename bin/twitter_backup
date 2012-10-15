@@ -1,0 +1,81 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+
+require File.expand_path(File.join(File.dirname(__FILE__), %w[.. lib twitter_backup]))
+
+@options = TwitterBackup::Config.load
+
+if @options[:CREDENTIALS].values.map(&:strip).include? ""
+  say "You need to give us necessary credentials"
+  say "Get them at https://dev.twitter.com/apps"
+end
+
+@options[:CREDENTIALS][:consumer_key] = ask("Consumer key?  ")       if @options[:CREDENTIALS][:consumer_key].blank?
+@options[:CREDENTIALS][:consumer_secret] = ask("Consumer secret?  ") if @options[:CREDENTIALS][:consumer_secret].blank?
+@options[:CREDENTIALS][:oauth_token] = ask("Access token?  ")        if @options[:CREDENTIALS][:oauth_token].blank?
+@options[:CREDENTIALS][:oauth_token_secret] = ask("Access token secret?  ") if @options[:CREDENTIALS][:oauth_token_secret].blank?
+@options[:CREDENTIALS][:username] = ask("Your twitter username?  ")  if @options[:CREDENTIALS][:username].blank?
+
+if @options[:CREDENTIALS].values.map(&:strip).include? ""
+  say "We really need those credentials"
+  exit 0
+else
+  TwitterBackup::Config.save(@options)
+end
+
+Twitter.configure do |config|
+  config.consumer_key = @options[:CREDENTIALS][:consumer_key]
+  config.consumer_secret = @options[:CREDENTIALS][:consumer_secret]
+  config.oauth_token = @options[:CREDENTIALS][:oauth_token]
+  config.oauth_token_secret = @options[:CREDENTIALS][:oauth_token_secret]
+end
+
+user = @options[:CREDENTIALS][:username]
+
+if false == @options[:initial_seeded]
+  my_tweats, raw_tweats, counter  = [], [], 0
+  last_tweat = TwitterBackup::Tweat.all.last
+  begin
+    while last_tweat != TwitterBackup::Tweat.new(raw_tweats.last)
+      counter += 1
+      raw_tweats.each do |tweat|
+        last_tweat = TwitterBackup::Tweat.new(tweat)
+        my_tweats << last_tweat unless my_tweats.last == last_tweat
+      end
+      if last_tweat.blank?
+        raw_tweats = Twitter.user_timeline(user, :count => 200)
+      else
+        raw_tweats = Twitter.user_timeline(user, :max_id => last_tweat.id, :count => 200)
+      end
+      say "Request ##{counter}"
+    end
+    @options[:initial_seeded] = true
+    TwitterBackup::Config.save(@options)
+    say "Seems like backuped"
+  rescue Twitter::Error::TooManyRequests => error
+    puts "AAAAAAAAAAAA"
+    raise
+  ensure
+    TwitterBackup::Tweat.save(my_tweats)
+    say "Saved tweats: <%= color(my_tweats.size.to_s, GREEN) %>"
+  end
+else
+  # latest_tweat = TwitterBackup::Tweat.latest
+  # unless latest_tweat.present?
+  #   say  "Woa! You've said that you have an initial seed, but we can't figure your latest tweat out."
+  #   raise "Something went wrong"
+  # end
+  # raw_tweats, new_tweats = []
+  # while latest_tweat != TwitterBackup::Tweat.new(raw_tweats.last)
+  #   raw_tweats.each do |tweat|
+  #     latest_tweat = TwitterBackup::Tweat.new(tweat)
+  #     my_tweats << latest_tweat unless my_tweats.last == latest_tweat
+  #   end
+  #   raw_tweats = Twitter.user_timeline(user, :since_id => latest_tweat.id, :count => 200)
+
+  # end
+end
+
+say "Tweats in your base: <%= color(TwitterBackup::Tweat.all.size.to_s, GREEN) %>"
+say "Your latest tweat: <%= color(TwitterBackup::Tweat.latest.text, MAGENTA) %>"
+say "Your first tweat: <%= color(TwitterBackup::Tweat.first.text, YELLOW) %>"
