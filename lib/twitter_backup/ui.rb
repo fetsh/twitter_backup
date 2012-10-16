@@ -6,7 +6,7 @@ module TwitterBackup
         say "You need to give us necessary credentials"
         say "Get them at https://dev.twitter.com/apps"
 
-        existing_credentials = TwitterBackup::Config.options[:CREDENTIALS]
+        existing_credentials = TBConfig.options[:credentials]
         new_credentials = {}
 
         new_credentials[:consumer_key]       = ask("Consumer key?  ").to_s          if existing_credentials[:consumer_key].blank?
@@ -14,19 +14,26 @@ module TwitterBackup
         new_credentials[:oauth_token]        = ask("Access token?  ").to_s          if existing_credentials[:oauth_token].blank?
         new_credentials[:oauth_token_secret] = ask("Access token secret?  ").to_s   if existing_credentials[:oauth_token_secret].blank?
 
-        TwitterBackup::Config.save_credentials new_credentials
+        TBConfig.save_credentials new_credentials
 
-        if TwitterBackup::Config.credentials_missing?
+        if TBConfig.credentials_missing?
           missing_credentials_exit
         end
 
       end
 
-      def greet_user user
+      def greet_user
         say %[===================================]
-        say %[Hello, <%= color("#{user.name}", GREEN) %>!]
-        say %[Your tweets at twitter.com: #{user.statuses_count}]
+        say %[Tweets for: <%= color("#{TBConfig.user.name}", GREEN) %>!]
+        say %[Your tweets at twitter.com: #{TBConfig.user.statuses_count}]
+      end
+
+      def exit_screen
         say %[Your tweets in this backup: #{Tweet.count}]
+        say %[Your earliest tweet:]
+        say %[  <%= color("#{Tweet.earliest.status}", YELLOW) %>]
+        say %[Your latest tweet:]
+        say %[  <%= color("#{Tweet.latest.status}", GREEN) %>]
         say %[===================================]
       end
 

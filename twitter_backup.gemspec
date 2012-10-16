@@ -20,5 +20,6 @@ Gem::Specification.new do |gem|
   gem.add_dependency("activerecord")
   gem.add_dependency("sqlite3")
   gem.add_dependency("twitter")
+  gem.add_dependency("slop")
 
 end

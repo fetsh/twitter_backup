@@ -3,7 +3,7 @@ CONFIG_DIR = File.expand_path(File.join("~/", ".config", "twitter_backup"))
 CONFIG_FILE = File.join(CONFIG_DIR, "config.yml")
 
 CONFIG_DEFAULTS = {
-  :CREDENTIALS => {
+  :credentials => {
     :consumer_key => "",
     :consumer_secret => "",
     :oauth_token => "",
@@ -15,12 +15,12 @@ CONFIG_DEFAULTS = {
     :pool => 5,
     :timeout => 5000
     },
-  :backup_file => File.join(CONFIG_DIR, "tweets"),
+  :backup_file => File.join(CONFIG_DIR, "tweets.yml"),
   :initial_seeded => false
 }
 
 module TwitterBackup
-  class Config
+  class TBConfig
     class << self
       def load
         TwitterBackup.prepare_file CONFIG_FILE
@@ -43,11 +43,12 @@ module TwitterBackup
       end
 
       def credentials_missing?
-        options[:CREDENTIALS].values.map(&:strip).include? ""
+        say ".... checking existance of credentials" if passed_opts.verbose?
+        options[:credentials].values.map(&:strip).include? ""
       end
 
       def save_credentials new_credentials
-        options[:CREDENTIALS] = options[:CREDENTIALS].merge(new_credentials)
+        options[:credentials] = options[:credentials].merge(new_credentials)
         save options
       end
 
@@ -72,19 +73,30 @@ module TwitterBackup
 
       def configure_twitter_gem
         Twitter.configure do |config|
-          config.consumer_key = options[:CREDENTIALS][:consumer_key]
-          config.consumer_secret = options[:CREDENTIALS][:consumer_secret]
-          config.oauth_token = options[:CREDENTIALS][:oauth_token]
-          config.oauth_token_secret = options[:CREDENTIALS][:oauth_token_secret]
+          config.consumer_key = options[:credentials][:consumer_key]
+          config.consumer_secret = options[:credentials][:consumer_secret]
+          config.oauth_token = options[:credentials][:oauth_token]
+          config.oauth_token_secret = options[:credentials][:oauth_token_secret]
         end
+        @@twitter_gem_configured = true
+      end
+
+      def configure
+        say ".... configuring database" if passed_opts.verbose?
+        configure_database
+
+        say ".... configuring twitter gem" if passed_opts.verbose?
+        configure_twitter_gem
       end
 
       def verify_credentials
+        say ".... checking validity of credentials" if passed_opts.verbose?
+        configure_twitter_gem unless @@twitter_gem_configured
         begin
-          user = Twitter.verify_credentials(:skip_status => true, :include_entities => false)
+          @@user = Twitter.verify_credentials(:skip_status => true, :include_entities => false)
         rescue Twitter::Error::Unauthorized => error
           empty_credentials
-          TwitterBackup::UI.wrong_credentials_exit
+          UI.wrong_credentials_exit
         end
       end
 
@@ -93,8 +105,20 @@ module TwitterBackup
       end
 
       def mark_as_seeded
-        options[:initial_seeded] = true
-        save options
+        unless seeded?
+          options[:initial_seeded] = true
+          save options
+        end
+      end
+
+      def user
+        @@user ||= verify_credentials
+      end
+
+      def passed_opts 
+        @@opts ||= Slop.parse do
+          on :v, :verbose, 'Enable verbose mode'
+        end
       end
 
     end

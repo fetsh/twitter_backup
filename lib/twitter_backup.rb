@@ -1,3 +1,4 @@
+require "slop"
 require "yaml"
 require "fileutils"
 require "highline/import"
