@@ -2,10 +2,12 @@ require "yaml"
 require "fileutils"
 require "highline/import"
 require 'active_support/core_ext/string'
+require "active_record"
 require "twitter"
 require_relative "twitter_backup/version"
 require_relative "twitter_backup/config"
-require_relative "twitter_backup/tweat"
+require_relative "twitter_backup/ui"
+require_relative "twitter_backup/tweet"
 
 module TwitterBackup
   def self.prepare_file file

@@ -1,7 +1,7 @@
 module TwitterBackup
   class Tweat
     
-    attr_reader :text, :id, :created_at, :user
+    attr_reader :text, :id, :created_at
     
     def self.all
       tweats = YAML::load_file(TwitterBackup::Config.options[:backup_file]) || []
@@ -42,9 +42,8 @@ module TwitterBackup
         @text = tweat.text
         @id = tweat.id
         @created_at = tweat.created_at
-        @user = tweat.user.screen_name
       else
-        @text = @id = @created_at = @user = nil
+        @text = @id = @created_at = nil
       end
     end
 
