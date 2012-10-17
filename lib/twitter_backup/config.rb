@@ -42,7 +42,6 @@ module TwitterBackup
       end
 
       def credentials_missing?
-        say ".... checking existance of credentials" if passed_opts.verbose?
         options[:credentials].values.map(&:strip).include? ""
       end
 
@@ -130,7 +129,7 @@ module TwitterBackup
           on :v, :verbose, 'Enable verbose mode'
           on :f, :force, "Try to download tweets, even it seems useless"
           on :s, :seed, "Try to download tweets older then the oldest one you have"
-          on :c, :config, "Config file. Default: #{CONFIG_FILE}"
+          on :c, :config, "Config file. Default: #{CONFIG_FILE}", :argument => true
         end
       end
 

@@ -16,6 +16,15 @@ Now, all you have to do is to run
 
     $ twitter_backup
 
+If you want to know, what's happening during your backup process, use verbose mode with `-v`.
+
+    $ twitter_backup -h
+        -v, --verbose      Enable verbose mode
+        -f, --force        Try to download tweets, even it seems useless
+        -s, --seed         Try to download tweets older then the oldest one you have
+        -c, --config       Config file. Default: ~/.config/twitter_backup/config.yml
+        -h, --help         Display this help message.
+
 ## TODO
 
-- Inform user about his config file whereabouts and allow him to change it
+- Automate adding this script to cron?

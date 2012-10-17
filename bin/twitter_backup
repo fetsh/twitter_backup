@@ -14,12 +14,12 @@ end
 
 begin
   
+  say ".... checking existance of credentials" if TBConfig.passed_opts.verbose?
   UI.ask_credentials if TBConfig.credentials_missing?
 
   UI.define_path_to_backup unless TBConfig.path_to_backup_defined?
 
   TBConfig.configure
-  TBConfig.verify_credentials
 
   UI.greet_user
 
