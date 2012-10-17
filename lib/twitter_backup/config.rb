@@ -15,7 +15,7 @@ CONFIG_DEFAULTS = {
     :pool => 5,
     :timeout => 5000
     },
-  :backup_file => File.join(CONFIG_DIR, "tweets.yml"),
+  :backup_file => "",
   :initial_seeded => false
 }
 
@@ -45,6 +45,15 @@ module TwitterBackup
       def credentials_missing?
         say ".... checking existance of credentials" if passed_opts.verbose?
         options[:credentials].values.map(&:strip).include? ""
+      end
+
+      def path_to_backup_defined?
+        options[:backup_file].present? && File.exist?(File.expand_path(options[:backup_file]))
+      end
+
+      def save_backup_file file
+        options[:backup_file] = file
+        save options
       end
 
       def save_credentials new_credentials

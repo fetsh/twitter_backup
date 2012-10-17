@@ -1,29 +1,22 @@
 # TwitterBackup
 
-TODO: Write a gem description
+This gem will download your tweets from Twitter and save them in an sqlite3 database and plaintext (yaml) archive file.
 
 ## Installation
-
-Add this line to your application's Gemfile:
-
-    gem 'twitter_backup'
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
 
     $ gem install twitter_backup
 
 ## Usage
 
-TODO: Write usage instructions here
+First of all, you need to create an app at https://dev.twitter.com/apps
+Your app will be assigned a 'consumer key'/'consumer secret' pair and you as a user will be assigned an 'access token/acces token secret' OAuth pair for that application.
+Without these credentials you won't be able to use TwitterBackup.
 
-## Contributing
+Now, all you have to do is to run a script
 
-1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Added some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
+    $ twitter_backup
+
+## TODO
+
+- Replace seeding and updating with just one method. Remove everything about seeding.
+- Prepend RT @retweeted_user to retweets

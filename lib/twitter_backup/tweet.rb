@@ -5,6 +5,7 @@ module TwitterBackup
       def update_tweets
         say ".... Updating tweets" if TBConfig.passed_opts.verbose?
         unless synced?
+          tweet_text = tweet.retweet? ? tweet.retweeted_status.text : tweet.text
           download(:to => latest.try(:status_id)).each do |tweet|
             find_or_create_by_status_id(
                     :status_id => tweet.id,
@@ -22,9 +23,10 @@ module TwitterBackup
           TBConfig.mark_as_seeded
         else
           download(:from => earliest.try(:status_id)).each do |tweet|
+            tweet_text = tweet.retweet? ? tweet.retweeted_status.text : tweet.text
             find_or_create_by_status_id(
                     :status_id => tweet.id,
-                    :status => tweet.text,
+                    :status => tweet_text,
                     :created_at => tweet.created_at
             )
           end
@@ -49,8 +51,10 @@ module TwitterBackup
         needed_tweets = []
 
         if args[:from].blank?
+          say ".... user_timeline API request" if TBConfig.passed_opts.verbose?
           received_tweets = Twitter.user_timeline(:count => 200)
         else
+          say ".... user_timeline API request" if TBConfig.passed_opts.verbose?
           received_tweets = Twitter.user_timeline(:count => 200, :max_id => args[:from])
         end
 
@@ -58,6 +62,7 @@ module TwitterBackup
           id_of_the_earliest_received_tweet = nil
           until id_of_the_earliest_received_tweet == received_tweets.last.id
             id_of_the_earliest_received_tweet = received_tweets.last.id
+            say ".... user_timeline API request" if TBConfig.passed_opts.verbose?
             received_tweets.concat(
                 Twitter.user_timeline(:count => 200, :max_id => received_tweets.last.id)
             )
@@ -66,6 +71,7 @@ module TwitterBackup
         else args[:to]
           id_of_the_earliest_needed_tweet = args[:to]
           until received_tweets.map(&:id).include? id_of_the_earliest_needed_tweet
+            say ".... user_timeline API request" if TBConfig.passed_opts.verbose?
             received_tweets.concat(
                 Twitter.user_timeline(:count => 200, :max_id => received_tweets.last.id)
             )

@@ -3,31 +3,32 @@
 
 require File.expand_path(File.join(File.dirname(__FILE__), %w[.. lib twitter_backup]))
 
-tb = TwitterBackup
+include TwitterBackup
 
-if tb::TBConfig.credentials_missing?
-  tb::UI.ask_credentials
+if TBConfig.credentials_missing?
+  UI.ask_credentials
 end
 
-tb::TBConfig.configure
+UI.define_path_to_backup unless TBConfig.path_to_backup_defined?
 
 begin
 
-  tb::TBConfig.verify_credentials
+  TBConfig.configure
+  TBConfig.verify_credentials
 
-  tb::UI.greet_user
+  UI.greet_user
 
-  if tb::TBConfig.seeded?
-    tb::Tweet.update_tweets
+  if TBConfig.seeded?
+    Tweet.update_tweets
   else
-    tb::Tweet.seed_tweets
+    Tweet.seed_tweets
   end
 
-  tb::Tweet.dump_to_backup_file
+  Tweet.dump_to_backup_file
 
 rescue Twitter::Error::TooManyRequests => error
-  tb::UI.too_many_requests_exit
+  UI.too_many_requests_exit
 ensure 
-  tb::UI.exit_screen
+  UI.exit_screen
 end
 
