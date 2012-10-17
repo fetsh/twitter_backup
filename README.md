@@ -20,8 +20,8 @@ If you want to know, what's happening during your backup process, use verbose mo
 
     $ twitter_backup -h
         -v, --verbose      Enable verbose mode
-        -f, --force        Try to download tweets, even it seems useless
-        -s, --seed         Try to download tweets older then the oldest one you have
+        -f, --force        Try to download tweets, even if it seems useless
+        -s, --seed         Try to download tweets older than the oldest one you have
         -c, --config       Config file. Default: ~/.config/twitter_backup/config.yml
         -h, --help         Display this help message.
 
