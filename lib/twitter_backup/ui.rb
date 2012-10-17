@@ -2,7 +2,6 @@ module TwitterBackup
   module UI
     class << self
       def ask_credentials
-
         say "You need to give us necessary credentials"
         say "Get them at https://dev.twitter.com/apps"
 
@@ -15,16 +14,13 @@ module TwitterBackup
         new_credentials[:oauth_token_secret] = ask("Access token secret?  ").to_s   if existing_credentials[:oauth_token_secret].blank?
 
         TBConfig.save_credentials new_credentials
-
-        if TBConfig.credentials_missing?
-          missing_credentials_exit
-        end
+        raise MissingCredentials if TBConfig.credentials_missing?
       end
 
       def define_path_to_backup
-        default_dir = File.join(CONFIG_DIR, "tweets.yml")
+        default_path = File.join(CONFIG_DIR, "tweets.yml")
         say "We are going to save your tweets to #{TBConfig.options[:db][:database]}"
-        say "And also as plain text to #{default_dir}"
+        say "And also as plain text to #{default_path}"
         if agree ("Dou you want to define another directory for text copy?  ")
           backup_dir = ask("Enter a path to your direcory:  ") do |q|
             q.validate = lambda { |file| File.exist?(File.dirname(File.expand_path(file))) }
@@ -32,59 +28,61 @@ module TwitterBackup
             q.confirm  = true
           end
           backup_file = File.expand_path(File.join(backup_dir, "tweets.yml"))
-          TwitterBackup.prepare_file backup_file
-          if File.exists? backup_file
-            say "Your tweets will be saved at #{backup_file}"
-            TBConfig.save_backup_file backup_file
-          else
-            failed_backup_path_exit(backup_file)
+        else
+          backup_file = default_path
+        end
+        
+        TBConfig.save_backup_file backup_file
+        
+      end
+
+      def greet_user
+        say %[.... <%= color("Tweets for: #{TBConfig.user.name}", GREEN) %>!]
+        say %[.... Your tweets at twitter.com: #{TBConfig.user.statuses_count}]
+      end
+
+      def exit_screen
+        if ActiveRecord::Base.connected?
+          say %[.... Your tweets in this backup: #{Tweet.count}]
+          if Tweet.earliest.present?
+            say %[.... Your earliest tweet:]
+            say %[.... <%= color("#{Tweet.earliest.try(:status)}", YELLOW) %>]
+          end
+          if Tweet.latest.present?
+            say %[.... Your latest tweet:]
+            say %[.... <%= color("#{Tweet.latest.try(:status)}", GREEN) %>]
           end
         end
       end
 
-      def greet_user
-        say %[===================================]
-        say %[Tweets for: <%= color("#{TBConfig.user.name}", GREEN) %>!]
-        say %[Your tweets at twitter.com: #{TBConfig.user.statuses_count}]
-      end
-
-      def exit_screen
-        say %[Your tweets in this backup: #{Tweet.count}]
-        say %[Your earliest tweet:]
-        say %[  <%= color("#{Tweet.earliest.status}", YELLOW) %>]
-        say %[Your latest tweet:]
-        say %[  <%= color("#{Tweet.latest.status}", GREEN) %>]
-        say %[===================================]
-      end
-
       def missing_credentials_exit
-        say %[<%= color("We can't work without credentials. Sorry.", RED) %>]
-        say "Go get them at https://dev.twitter.com/apps"
-        say "And run this script again"
-        exit 0
+        say %[.... <%= color("We can't work without credentials. Sorry.", RED) %>]
+        say ".... Go get them at https://dev.twitter.com/apps"
+        say ".... And run this script again"
+        exit 1
       end
 
       def wrong_credentials_exit
-        say %[<%= color("Your credentials are somehow wrong.", RED) %>]
-        say "Go get the right ones at https://dev.twitter.com/apps"
-        say "And run this script again"
-        exit 0
+        say %[.... <%= color("Your credentials are somehow wrong.", RED) %>]
+        say ".... Go get the right ones at https://dev.twitter.com/apps"
+        say ".... And run this script again"
+        exit 1
       end
 
-      def failed_backup_path_exit file
-        say %[<%= color("We've failed to create #{file} for you.", RED) %>]
-        say "Run this script again and chose another place to store your backup"
-        say "Or edit it manually at #{CONFIG_FILE}"
-        exit 0
+      def failed_backup_path_exit message
+        say %[.... <%= color("We've failed to create #{TBConfig.options[:backup_file]} for you.", RED) %>]
+        say %[.... #{message}]
+        TBConfig.save_backup_file("")
+        say ".... Run this script again and chose another place to store your backup"
+        say ".... Or edit it manually at #{TBConfig.config_file}"
+        exit 1
       end
 
       def too_many_requests_exit
-        say %[<%= color("You've exceeded your request limit", RED) %>]
-        say "Try again tomorrow =)"
-        exit 0
+        say %[.... <%= color("You've exceeded your request limit", RED) %>]
+        say ".... Try again tomorrow =)"
+        exit 1
       end
-
-
 
     end
   end

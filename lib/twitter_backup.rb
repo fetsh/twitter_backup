@@ -6,8 +6,8 @@ require 'active_support/core_ext/string'
 require "active_record"
 require "twitter"
 require_relative "twitter_backup/version"
+require_relative "twitter_backup/error"
 require_relative "twitter_backup/config"
-require_relative "twitter_backup/ui"
 require_relative "twitter_backup/tweet"
 
 module TwitterBackup
@@ -16,6 +16,7 @@ module TwitterBackup
     dir = File.dirname file
     FileUtils.mkdir_p dir unless File.exist? dir
     FileUtils.touch file unless File.exist? file
+    raise( Error::InvalidPath, "Can't create file: #{file}" ) unless File.exist?( file )
   end
 end
 

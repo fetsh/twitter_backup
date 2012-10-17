@@ -1,34 +1,49 @@
 #!/usr/bin/env ruby
 # coding: utf-8
 
-require File.expand_path(File.join(File.dirname(__FILE__), %w[.. lib twitter_backup]))
+# require File.expand_path(File.join(File.dirname(__FILE__), %w[.. lib twitter_backup]))
+require "twitter_backup"
+require "twitter_backup/ui"
 
 include TwitterBackup
 
-if TBConfig.credentials_missing?
-  UI.ask_credentials
+if TBConfig.passed_opts.help?
+  TBConfig.passed_opts.help 
+  exit 0
 end
 
-UI.define_path_to_backup unless TBConfig.path_to_backup_defined?
-
 begin
+  
+  UI.ask_credentials if TBConfig.credentials_missing?
+
+  UI.define_path_to_backup unless TBConfig.path_to_backup_defined?
 
   TBConfig.configure
   TBConfig.verify_credentials
 
   UI.greet_user
 
-  if TBConfig.seeded?
-    Tweet.update_tweets
-  else
-    Tweet.seed_tweets
-  end
+  Tweet.update_tweets
+  Tweet.update_tweets(:from => :earliest) if TBConfig.passed_opts.seed?
 
   Tweet.dump_to_backup_file
 
+rescue Error::MissingCredentials => error
+  UI.missing_credentials_exit
+
+rescue Twitter::Error::Unauthorized => error
+  TBConfig.empty_credentials
+  UI.wrong_credentials_exit
+
 rescue Twitter::Error::TooManyRequests => error
   UI.too_many_requests_exit
-ensure 
+
+rescue Error::InvalidBackupFile => error
+  UI.failed_backup_path_exit( error.message )
+
+rescue Error::InvalidPath => error
+  say %[<%= color("#{error.message}", :red) %>]
+  exit 1
+ensure
   UI.exit_screen
 end
-

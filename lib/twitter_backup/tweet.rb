@@ -1,45 +1,53 @@
 module TwitterBackup
   class Tweet < ActiveRecord::Base
+
+    serialize :raw
+
+    scope :slim, select([:id, :created_at, :status, :status_id])
+    
     class << self
 
-      def update_tweets
-        say ".... Updating tweets" if TBConfig.passed_opts.verbose?
-        unless synced?
-          tweet_text = tweet.retweet? ? tweet.retweeted_status.text : tweet.text
-          download(:to => latest.try(:status_id)).each do |tweet|
-            find_or_create_by_status_id(
-                    :status_id => tweet.id,
-                    :status => tweet.text,
-                    :created_at => tweet.created_at
-            )
-          end
+      def update_tweets(args={})
+        args = {
+          :from    => nil,
+          :to    => latest.try(:status_id)
+        }.merge(args)
+        if args[:from] == :earliest
+          args[:from] = earliest.try(:status_id)
+          args[:to] = nil if args[:to] == latest.try(:status_id)
         end
-        say ".... Succeeded. Up to date" if synced? && TBConfig.passed_opts.verbose?
-      end
-
-      def seed_tweets
-        say ".... Seeding" if TBConfig.passed_opts.verbose?
-        if synced?
-          TBConfig.mark_as_seeded
+        if !synced? || TBConfig.passed_opts.force?
+          say ".... Updating tweets from #{args[:from] || 'the youngest one'} to #{args[:to] || 'the oldest one'}" if TBConfig.passed_opts.verbose?
+          download(:from => args[:from], :to => args[:to]).each do |tweet|
+            if absent_tweet = find_by_status_id(tweet.id)
+              next
+            else
+              say %[<%= color(".", YELLOW) %> ] if TBConfig.passed_opts.verbose?
+              tweet_text = if tweet.retweet?
+                "RT @#{tweet.retweeted_status.user.screen_name}: #{tweet.retweeted_status.text}"
+              else
+                tweet.text
+              end
+              create(
+                :status_id => tweet.id,
+                :status => tweet_text,
+                :created_at => tweet.created_at,
+                :raw => tweet
+              )
+            end
+          end
+          say "!"
+          say ".... Updating succeeded" if TBConfig.passed_opts.verbose?
         else
-          download(:from => earliest.try(:status_id)).each do |tweet|
-            tweet_text = tweet.retweet? ? tweet.retweeted_status.text : tweet.text
-            find_or_create_by_status_id(
-                    :status_id => tweet.id,
-                    :status => tweet_text,
-                    :created_at => tweet.created_at
-            )
-          end
-          TBConfig.mark_as_seeded if synced?
+          say ".... Seems like there is nothing we can update" if TBConfig.passed_opts.verbose?
         end
-        say ".... Succeeded. Seeded" if TBConfig.seeded? && TBConfig.passed_opts.verbose?
       end
 
       def latest
-        self.order("created_at DESC").first
+        self.slim.order("created_at DESC").first
       end
       def earliest
-        self.order("created_at DESC").last
+        self.slim.order("created_at DESC").last
       end
 
       def download(args={})
@@ -47,6 +55,7 @@ module TwitterBackup
           :from    => nil,
           :to    => nil
         }.merge(args)
+        args[:from], args[:to] = [args[:from], args[:to]].sort.reverse unless [args[:from], args[:to]].include? nil
 
         needed_tweets = []
 
@@ -83,21 +92,25 @@ module TwitterBackup
       end
 
       def synced?
-        available_tweets = TBConfig.user.statuses_count
-        available_tweets = 3200 if TBConfig.user.statuses_count > 3200
-        available_tweets == self.count
+        self.count == TBConfig.user.statuses_count
       end
 
       def dump_to_backup_file
         if TBConfig.passed_opts.verbose?
           say ".... Saving tweets to: #{TBConfig.options[:backup_file]}"
         end
-        tweets = order("created_at DESC").map{ |tweet| {
+        tweets = slim.order("created_at DESC").map{ |tweet| {
                                           :id => tweet.status_id,
                                           :text => tweet.status,
-                                          :created_at => tweet.created_at } }
+                                          :created_at => tweet.created_at,
+                                          :link => tweet.public_link } }
         File.open( TBConfig.options[:backup_file], "w" ) { |f| YAML::dump( tweets, f ) }
       end
     end
+
+    def public_link
+      "https://twitter.com/#{TBConfig.user.screen_name}/status/#{self.status_id}"
+    end
+
   end
 end

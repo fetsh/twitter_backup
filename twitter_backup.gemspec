@@ -4,7 +4,7 @@ require File.expand_path('../lib/twitter_backup/version', __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = ["il.zoff"]
   gem.email         = ["il.zoff@gmail.com"]
-  gem.description   = %q{This gem will download your tweets from Twitter and save them in an sqlite3 database and plaintext (yaml) archive file.}
+  gem.description   = %q{This gem will download your tweets from Twitter and save them to sqlite3 database and plaintext (yaml) archive file.}
   gem.summary       = %q{Twitter archiver}
   gem.homepage      = "http://github.com/ilzoff/twitter_backup"
 
